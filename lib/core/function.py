@@ -15,7 +15,7 @@ import os
 
 import numpy as np
 import torch
-from sklearn.metrics import accuracy_score
+
 from torch.nn import CrossEntropyLoss
 
 from core.evaluate import accuracy
@@ -24,16 +24,6 @@ from utils.vis import save_debug_images
 from utils.transforms import flip_back
 
 logger = logging.getLogger(__name__)
-
-def _topk_class(scores, K=1):
-    #same as our cat_out dimension
-    batch, cat, height, width = scores.size()
-
-    topk_scores, topk_inds = torch.topk(scores.reshape(batch, -1), K)
-
-    topk_clses = (topk_inds / (height * width)).int()
-    
-    return topk_clses, topk_scores 
 
 def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
           output_dir, tb_log_dir, writer_dict):
@@ -45,10 +35,9 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
 
     # switch to train mode
     model.train()
-    #cat_criterion = CrossEntropyLoss()
 
     end = time.time()
-    for i, (input, target_heat, target_weight, target_cat, meta) in enumerate(train_loader):
+    for i, (input, target_heat, target_cat, meta) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -56,25 +45,22 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
         heat_out, cat_out = model(input)
         target_heat = target_heat.cuda(non_blocking=True)
         target_cat = target_cat.cuda(non_blocking=True)
-        target_weight = target_weight.cuda(non_blocking=True)
 
         if isinstance(heat_out, list):
-            loss = criterion(heat_out[0], target_heat, target_weight)
+            loss = criterion(heat_out[0], target_heat)
             for output in heat_out[1:]:
-                loss += criterion(output, target_heat, target_weight)
+                loss += criterion(output, target_heat)
         else:
             output_heat = heat_out
-            #output_cat = classes.type(torch.cuda.FloatTensor)
 
-            #target_new = torch.max(target_cat, 1)[1]
-            loss_h = criterion(output_heat, target_heat, target_weight)
-            #print('This is target cat:{}'.format(target_cat.shape))
-            loss_c = criterion2(cat_out, torch.squeeze(target_cat))
-            #loss_c = cat_criterion(cat_out, torch.squeeze(target_cat))
-            #loss = loss_h
+            loss_h = criterion(output_heat, target_heat)
+
+            target_cat = target_cat.view(-1)
+            loss_c = criterion2(cat_out, target_cat)
+
             loss = loss_h + loss_c
 
-        # loss = criterion(output, target, target_weight)
+
 
         # compute gradient and do update step
         optimizer.zero_grad()
@@ -89,12 +75,12 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
 
 
 
-        correct = 0
-        total = 0
-
-        total = total+1
-        correct += (cat_out == target_cat).sum().item()
-        avg_acc_c = correct / total
+        # correct = 0
+        # total = 0
+        #
+        # total = total+1
+        # correct += (cat_out == target_cat).sum().item()
+        # avg_acc_c = correct / total
         #avg_acc= (avg_acc_c + avg_acc_h)/2
 
         point_acc.update(avg_acc_h, cnt_h)
@@ -109,12 +95,11 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
                   'Speed {speed:.1f} samples/s\t' \
                   'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
                   'Loss {loss.val:.5f} ({loss.avg:.5f})\t' \
-                  'point Accuracy {point_acc.val:.3f} ({point_acc.avg:.3f})\t'\
-                  'cls acc {point_acc.avg:.3f}\t'\
+                  'Accuracy {point_acc.val:.3f} ({point_acc.avg:.3f})'\
                   .format(
                 epoch, i, len(train_loader), batch_time=batch_time,
                 speed=input.size(0) / batch_time.val,
-                data_time=data_time, loss=losses, point_acc=point_acc, cls_acc=avg_acc_c )
+                data_time=data_time, loss=losses, point_acc=point_acc)
             logger.info(msg)
 
             writer = writer_dict['writer']
@@ -124,8 +109,8 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
             writer_dict['train_global_steps'] = global_steps + 1
 
             prefix = '{}_{}'.format(os.path.join(output_dir, 'train'), i)
-            # save_debug_images(config, input, meta, target, pred*4, output,
-            #                   prefix)
+            save_debug_images(config, input, meta, target_heat, target_cat, pred_h*4, output_heat, cat_out,
+                              prefix)
 
 
 def validate(config, val_loader, val_dataset, model, criterion, criterion2, output_dir,

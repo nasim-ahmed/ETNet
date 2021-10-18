@@ -119,28 +119,28 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name,
     cv2.imwrite(file_name, grid_image)
 
 
-def save_debug_images(config, input, meta, target, points_pred, output,
+def save_debug_images(config, input, meta, target_heat, target_cat, points_pred, output_heat, output_cat,
                       prefix):
     if not config.DEBUG.DEBUG:
         return
 
     if config.DEBUG.SAVE_BATCH_IMAGES_GT:
         save_batch_image_with_joints(
-            input, meta['points'], meta['points_vis'],
+            input, meta['points'],
             '{}_gt.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_BATCH_IMAGES_PRED:
         save_batch_image_with_joints(
-            input, points_pred, meta['points_vis'],
+            input, points_pred,
             '{}_pred.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_HEATMAPS_GT:
         save_batch_heatmaps(
-            input, target, '{}_hm_gt.jpg'.format(prefix)
+             input, target_heat, target_cat, '{}_hm_gt.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_HEATMAPS_PRED:
         save_batch_heatmaps(
-            input, output, '{}_hm_pred.jpg'.format(prefix)
+             input, output_heat, output_cat, '{}_hm_pred.jpg'.format(prefix)
         )
 
 

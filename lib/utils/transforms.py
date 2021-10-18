@@ -30,28 +30,20 @@ def flip_back(output_flipped, matched_parts):
     return output_flipped
 
 
-def fliplrtb_points(points, points_vis, width, height, matched_parts):
+def fliplrtb_points(points, width, height, matched_parts):
     """
     flip coords
     """
     # Flip horizontal
     points[:, 0] = width - points[:, 0] - 1
-    # Flip vertical
-    # points[:, 1] = height - points[:, 1] - 1
-
-
-    # Change left-right parts
 
     for pair in matched_parts:
         # Change left-right parts
 
         points[pair[0], :], points[pair[1], :] = \
             points[pair[1], :], points[pair[0], :].copy()
-        points_vis[pair[0], :], points_vis[pair[1], :] = \
-            points_vis[pair[1], :], points_vis[pair[0], :].copy()
 
-
-    return points * points_vis, points_vis
+    return points
 
 def transform_preds(coords, center, scale, output_size):
     target_coords = np.zeros(coords.shape)

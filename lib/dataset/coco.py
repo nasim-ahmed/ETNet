@@ -66,7 +66,6 @@ class COCODataset(ExtremeDataset):
                 for cls in self.classes[1:]
             ]
         )
-        print(self._coco_ind_to_class_ind)
 
         # load image file names
         self.image_set_index = self._load_image_set_index()
@@ -121,7 +120,7 @@ class COCODataset(ExtremeDataset):
         for index in self.image_set_index:
             #print('THIS IS THE IMAGE INDEX {0}'.format(index))
             gt_db.extend(self._load_coco_extremepoint_annotation_kernal(index))
-
+            
         return gt_db
 
     def _load_coco_extremepoint_annotation_kernal(self, index):
@@ -157,27 +156,15 @@ class COCODataset(ExtremeDataset):
 
         rec = []
         for obj in objs:
-
             cls = self._coco_ind_to_class_ind[obj['category_id']]
 
-            cat = np.array([cls-1], dtype=int)
-            #print('THIS IS THE CATEGORY: {0}'.format(cat))
+            cat = np.array([cls - 1], dtype=float)
 
-            # ignore objs without extremepoints annotation
-            # if max(obj['extreme_points']) == 0:
-            #     continue
-
-            points_4p = np.zeros((self.num_points, 3), dtype=float)
-            points_4p_vis = np.zeros((self.num_points, 3), dtype=float)
+            points_4p = np.zeros((self.num_points, 2), dtype=np.float32)
+            # points_4p_vis = np.zeros((self.num_points, 3), dtype=float)
             for ipt in range(self.num_points):
                 points_4p[ipt, 0] = obj['extreme_points'][ipt * 2 + 0]
                 points_4p[ipt, 1] = obj['extreme_points'][ipt * 2 + 1]
-                points_4p[ipt, 2] = 0
-                    #np.array([cls], dtype=float)
-
-                points_4p_vis[ipt, 0] = 1
-                points_4p_vis[ipt, 1] = 1
-                points_4p_vis[ipt, 2] = 0
 
             center, scale = self._box2cs(obj['clean_bbox'][:4])
             rec.append({
@@ -185,7 +172,6 @@ class COCODataset(ExtremeDataset):
                 'center': center,
                 'scale': scale,
                 'points_4p': points_4p,
-                'points_4p_vis': points_4p_vis,
                 'filename': '',
                 'imgnum': 0,
                 'category': cat,
@@ -233,8 +219,6 @@ class COCODataset(ExtremeDataset):
     def evaluate(self, cfg, preds, output_dir, all_boxes, img_path, meta,
                  *args, **kwargs):
         rank = cfg.RANK
-
-        
 
         res_folder = os.path.join(output_dir, 'results')
         if not os.path.exists(res_folder):
@@ -339,7 +323,6 @@ class COCODataset(ExtremeDataset):
             with open(res_file, 'w') as f:
                 for c in content:
                     f.write(c)
-
 
     def _coco_keypoint_results_one_category_kernel(self, data_pack):
         cat_id = data_pack['cat_id']
