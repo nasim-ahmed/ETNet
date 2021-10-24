@@ -25,6 +25,15 @@ from utils.transforms import flip_back
 
 logger = logging.getLogger(__name__)
 
+def _topk_class(scores, K=1):
+    batch, cat = scores.size()
+
+    topk_scores, topk_inds = torch.topk(scores, K)
+
+    topk_cls = topk_inds.int()
+
+    return topk_scores, topk_cls
+
 def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
           output_dir, tb_log_dir, writer_dict):
     batch_time = AverageMeter()
@@ -59,8 +68,6 @@ def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
             loss_c = criterion2(cat_out, target_cat)
 
             loss = loss_h + loss_c
-
-
 
         # compute gradient and do update step
         optimizer.zero_grad()
@@ -137,23 +144,22 @@ def validate(config, val_loader, val_dataset, model, criterion, criterion2, outp
     meta_data ={}
     with torch.no_grad():
         end = time.time()
-        for i, (input, target_heat, target_weight, target_cat, meta) in enumerate(val_loader):
+        for i, (input, target_heat, target_cat, meta) in enumerate(val_loader):
         #for i, (input, target, target_weight, meta) in enumerate(val_loader):
-            # print("target_l")
-            # print(target)
-            # compute output
+
             heat_out, cat_out = model(input)
+
             if isinstance(heat_out, list):
-                output = heat_out[-1]
+                output_heat = heat_out[-1]
             else:
-                output = heat_out
+                output_heat = heat_out
 
             if config.TEST.FLIP_TEST:
                 # this part is ugly, because pytorch has not supported negative index
                 # input_flipped = model(input[:, :, :, ::-1])
                 input_flipped = np.flip(input.cpu().numpy(), 3).copy()
                 input_flipped = torch.from_numpy(input_flipped).cuda()
-                heat_out_flipped, cls = model(input_flipped)
+                heat_out_flipped, cls_f = model(input_flipped)
 
                 if isinstance(heat_out_flipped, list):
                     output_flipped = heat_out_flipped[-1]
@@ -164,25 +170,20 @@ def validate(config, val_loader, val_dataset, model, criterion, criterion2, outp
                                            val_dataset.flip_pairs)
                 output_flipped = torch.from_numpy(output_flipped.copy()).cuda()
 
-                output_heat = (output + output_flipped) * 0.5
-
-
-            #print(output.shape) #shape([19, 4, 64, 48])
-            cls, score = _topk_class(cat_out, K=1)
-            # print('clasess')
-            # print(classes)
-            output_cat = cls.type(torch.cuda.FloatTensor)
+                output_heat = (output_heat + output_flipped) * 0.5
+                cat_out = (cat_out + cls_f) * 0.5
 
             target_heat = target_heat.cuda(non_blocking=True)
             target_cat = target_cat.cuda(non_blocking=True)
-            target_weight = target_weight.cuda(non_blocking=True)
 
-            target_new = torch.max(target_cat, 1)[1]
-            loss_h = criterion(output_heat, target_heat, target_weight)
-            loss_c = criterion2(output_cat, target_new)
+            loss_h = criterion(output_heat, target_heat)
+
+            target_cat = target_cat.view(-1)
+            loss_c = criterion2(cat_out, target_cat)
+
             loss = loss_h + loss_c
 
-            #loss = criterion(output, target, target_weight)
+            score, cls = _topk_class(cat_out, K=1)
 
             num_images = input.size(0)
             #measure accuracy and record loss
@@ -200,7 +201,6 @@ def validate(config, val_loader, val_dataset, model, criterion, criterion2, outp
             s = meta['scale'].numpy()
             score = meta['score'].numpy()
             cat = cls.detach().cpu().numpy().flatten()
-            
 
             preds, maxvals = get_final_preds(
                 config, output_heat.clone().cpu().numpy(), c, s)
@@ -229,10 +229,8 @@ def validate(config, val_loader, val_dataset, model, criterion, criterion2, outp
                 prefix = '{}_{}'.format(
                     os.path.join(output_dir, 'val'), i
                 )
-                save_debug_images(config, input, meta, target_heat, target_cat, pred_h*4, output_heat, output_cat,
+                save_debug_images(config, input, meta, target_heat, target_cat, pred_h*4, output_heat, cat,
                                   prefix)
-                meta_data = meta
-        
 
         name_values, perf_indicator = val_dataset.evaluate(
             config, all_preds, output_dir, all_boxes, image_path,

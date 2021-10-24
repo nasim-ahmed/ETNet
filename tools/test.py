@@ -24,7 +24,7 @@ import torchvision.transforms as transforms
 import _init_paths
 from config import cfg
 from config import update_config
-from core.loss import KeypointMSELoss
+from core.loss import KeypointMSELoss, CategoryLoss
 from core.function import validate
 from utils.utils import create_logger
 
@@ -105,6 +105,7 @@ def main():
     criterion = KeypointMSELoss(
         use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
     ).cuda()
+    criterion2 = CategoryLoss().cuda()
 
     # Data loading code
     normalize = transforms.Normalize(
@@ -125,8 +126,9 @@ def main():
         pin_memory=True
     )
 
+
     # evaluate on validation set
-    validate(cfg, valid_loader, valid_dataset, model, criterion,
+    validate(cfg, valid_loader, valid_dataset, model, criterion, criterion2,
              final_output_dir, tb_log_dir)
 
 

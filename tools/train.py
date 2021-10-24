@@ -108,7 +108,7 @@ def main():
     shutil.copy2(
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
-    #logger.info(pprint.pformat(model))
+    logger.info(pprint.pformat(model))
 
     writer_dict = {
         'writer': SummaryWriter(log_dir=tb_log_dir),

@@ -120,7 +120,7 @@ class COCODataset(ExtremeDataset):
         for index in self.image_set_index:
             #print('THIS IS THE IMAGE INDEX {0}'.format(index))
             gt_db.extend(self._load_coco_extremepoint_annotation_kernal(index))
-            
+            break
         return gt_db
 
     def _load_coco_extremepoint_annotation_kernal(self, index):
@@ -233,16 +233,18 @@ class COCODataset(ExtremeDataset):
         )
 
         # person x (keypoints)
+        #
         _kpts = []
         for idx, kpt in enumerate(preds):
             _kpts.append({
                 'keypoints': kpt,
+                'class': all_boxes[idx][6],
                 'center': all_boxes[idx][0:2],
                 'scale': all_boxes[idx][2:4],
                 'area': all_boxes[idx][4],
                 'score': all_boxes[idx][5],
                 'image': int(img_path[idx][-16:-4]),
-                
+
             })
         # image x person x (keypoints)
         kpts = defaultdict(list)
@@ -250,7 +252,7 @@ class COCODataset(ExtremeDataset):
             kpts[kpt['image']].append(kpt)
 
         # rescoring and oks nms
-        num_joints = self.num_points
+        num_points = self.num_points
         in_vis_thre = self.in_vis_thre
         oks_thre = self.oks_thre
         oks_nmsed_kpts = []
@@ -260,7 +262,7 @@ class COCODataset(ExtremeDataset):
                 box_score = n_p['score']
                 kpt_score = 0
                 valid_num = 0
-                for n_jt in range(0, num_joints):
+                for n_jt in range(0, num_points):
                     t_s = n_p['keypoints'][n_jt][2]
                     if t_s > in_vis_thre:
                         kpt_score = kpt_score + t_s
@@ -334,9 +336,9 @@ class COCODataset(ExtremeDataset):
                 continue
 
             _key_points = np.array([img_kpts[k]['keypoints']
-                                    for k in range(len(img_kpts))])
+                                    for k in range(len(img_kpts))])  # 19,4,3
             key_points = np.zeros(
-                (_key_points.shape[0], self.num_points * 3), dtype=np.float
+                (_key_points.shape[0], self.num_points * 3), dtype=np.float  # 19,12
             )
 
             for ipt in range(self.num_points):
@@ -344,14 +346,22 @@ class COCODataset(ExtremeDataset):
                 key_points[:, ipt * 3 + 1] = _key_points[:, ipt, 1]
                 key_points[:, ipt * 3 + 2] = _key_points[:, ipt, 2]  # keypoints score.
 
+            cat = np.array([img_kpts[k]['class']+1 for k in range(len(img_kpts))])  # 19,
+
+            coco_inds = []
+            for id in cat:
+                coco_ind = list(self._coco_ind_to_class_ind.keys())[
+                    list(self._coco_ind_to_class_ind.values()).index(id)]
+                coco_inds.append(coco_ind)
+
             result = [
                 {
                     'image_id': img_kpts[k]['image'],
-                    'category_id': cat_id,
+                    'category_id': coco_inds[k],
                     'keypoints': list(key_points[k]),
                     'score': img_kpts[k]['score'],
-                    'center': list(img_kpts[k]['center']),
-                    'scale': list(img_kpts[k]['scale'])
+                    # 'center': list(img_kpts[k]['center']),
+                    # 'scale': list(img_kpts[k]['scale'])
                 }
                 for k in range(len(img_kpts))
             ]
@@ -361,7 +371,7 @@ class COCODataset(ExtremeDataset):
 
     def _do_python_keypoint_eval(self, res_file, res_folder):
         coco_dt = self.coco.loadRes(res_file)
-        coco_eval = COCOeval(self.coco, coco_dt, 'keypoints')
+        coco_eval = COCOeval(self.coco, coco_dt, 'bbox')
         coco_eval.params.useSegm = None
         coco_eval.evaluate()
         coco_eval.accumulate()
@@ -374,6 +384,8 @@ class COCODataset(ExtremeDataset):
             info_str.append((name, coco_eval.stats[ind]))
 
         return info_str
+
+
 
 
 
