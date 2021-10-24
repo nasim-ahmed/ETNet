@@ -297,7 +297,6 @@ class TransPoseR(nn.Module):
             padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
         )
 
-
         self.linear_layers = nn.Linear(in_features=256*64*48, out_features=80)
 
 
@@ -423,13 +422,13 @@ class TransPoseR(nn.Module):
         x = x.permute(1, 2, 0).contiguous().view(bs, c, h, w)
         x = self.deconv_layers(x)
         heat_out = self.heat_layer(x)
+        x = self.cat_layer(x)
+    #    x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+
         x = torch.flatten(x,1)
 
         cat_out = self.linear_layers(x)
-        #cat_out = self.act(cat_out)
-
-
-        #cat_final = self.cat_layer_final(cat_out)
 
         return heat_out, cat_out
 
