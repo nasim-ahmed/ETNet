@@ -297,6 +297,7 @@ class TransPoseR(nn.Module):
             padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
         )
 
+<<<<<<< HEAD
         self.cat_layer = nn.Conv2d(
             in_channels=d_model,
             out_channels=d_model,
@@ -306,6 +307,16 @@ class TransPoseR(nn.Module):
         )
 
         #self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+=======
+        # self.cat_layer = nn.Conv2d(
+        #     in_channels=d_model,
+        #     out_channels=80,
+        #     kernel_size=extra.FINAL_CONV_KERNEL,
+        #     stride=1,
+        #     padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
+        # )
+
+>>>>>>> 42dd8c0fbc0b9d85af2f88ed0f44abcaa06f8318
         self.linear_layers = nn.Linear(in_features=256*64*48, out_features=80)
         #xavier_uniform_(self.linear_layers.weight)
         #self.act = Softmax(dim=1)
@@ -434,9 +445,13 @@ class TransPoseR(nn.Module):
         x = x.permute(1, 2, 0).contiguous().view(bs, c, h, w)
         x = self.deconv_layers(x)
         heat_out = self.heat_layer(x)
+<<<<<<< HEAD
         x = self.cat_layer(x)
     #    x = self.avgpool(x)
         x = torch.flatten(x, 1)
+=======
+        x = torch.flatten(x,1)
+>>>>>>> 42dd8c0fbc0b9d85af2f88ed0f44abcaa06f8318
 
         cat_out = self.linear_layers(x)
         #cat_out = self.act(cat_out)
