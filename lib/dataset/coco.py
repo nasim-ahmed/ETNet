@@ -120,7 +120,6 @@ class COCODataset(ExtremeDataset):
         for index in self.image_set_index:
             #print('THIS IS THE IMAGE INDEX {0}'.format(index))
             gt_db.extend(self._load_coco_extremepoint_annotation_kernal(index))
-            break
         return gt_db
 
     def _load_coco_extremepoint_annotation_kernal(self, index):

@@ -297,19 +297,9 @@ class TransPoseR(nn.Module):
             padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
         )
 
-        # self.cat_layer = nn.Conv2d(
-        #     in_channels=d_model,
-        #     out_channels=80,
-        #     kernel_size=extra.FINAL_CONV_KERNEL,
-        #     stride=1,
-        #     padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
-        # )
 
         self.linear_layers = nn.Linear(in_features=256*64*48, out_features=80)
-        #xavier_uniform_(self.linear_layers.weight)
-        #self.act = Softmax(dim=1)
 
-        #self.cat_layer_final = nn.Softmax(dim=1)#check
 
     def _make_position_embedding(self, w, h, d_model, pe_type='sine'):
         assert pe_type in ['none', 'learnable', 'sine']
