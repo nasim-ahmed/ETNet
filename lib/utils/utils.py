@@ -1,3 +1,8 @@
+# ------------------------------------------------------------------------------
+# Copyright (c) Microsoft
+# Licensed under the MIT License.
+# Written by Bin Xiao (Bin.Xiao@microsoft.com)
+# ------------------------------------------------------------------------------
 
 from __future__ import absolute_import
 from __future__ import division
@@ -21,7 +26,8 @@ def create_logger(cfg, cfg_name, phase='train'):
         print('=> creating {}'.format(root_output_dir))
         root_output_dir.mkdir()
 
-    dataset = cfg.DATASET.DATASET
+    dataset = cfg.DATASET.DATASET + '_' + cfg.DATASET.HYBRID_points_TYPE \
+        if cfg.DATASET.HYBRID_points_TYPE else cfg.DATASET.DATASET
     dataset = dataset.replace(':', '_')
     model = cfg.MODEL.NAME
     cfg_name = os.path.basename(cfg_name).split('.')[0]

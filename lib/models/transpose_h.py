@@ -469,7 +469,7 @@ class TransPoseH(nn.Module):
 
         self.final_layer = nn.Conv2d(
             in_channels=d_model,
-            out_channels=cfg['MODEL']['NUM_POINTS'],
+            out_channels=cfg['MODEL']['NUM_points'],
             kernel_size=extra['FINAL_CONV_KERNEL'],
             stride=1,
             padding=1 if extra['FINAL_CONV_KERNEL'] == 3 else 0

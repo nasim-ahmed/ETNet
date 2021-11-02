@@ -7,26 +7,16 @@ DATA_DIR: ''
 GPUS: (0,)
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
-WORKERS: 0
+WORKERS: 24
 PRINT_FREQ: 100
 
 DATASET:
-
   COLOR_RGB: true
   DATASET: 'coco'
   DATA_FORMAT: jpg
   FLIP: true
-  #NUM_JOINTS_HALF_BODY: 8
-  #PROB_HALF_BODY: 0.3
-  RAND_CROP: true
-  RAND_COLOR: true
-  BORDER: 128
-  LIGHTING: true
-  RAND_SCALE_MIN: 0.6
-  RAND_SCALE_MAX: 1.4
-  RAND_SCALE_STEP: 0.1
-  RAND_SCALES: [1]
-
+#  NUM_points_HALF_BODY: 8
+#  PROB_HALF_BODY: 0.3
   ROOT: 'data/coco/'
   ROT_FACTOR: 45
   SCALE_FACTOR: 0.35
@@ -41,7 +31,6 @@ MODEL:
   ATTENTION_ACTIVATION: relu
   POS_EMBEDDING: sine
   # #
-  NUM_POINTS: 4
   NAME: 'transpose_r'
   PRETRAINED: 'models/pytorch/imagenet/resnet50-19c8e357.pth'
   IMAGE_SIZE:
@@ -51,8 +40,7 @@ MODEL:
   - 48
   - 64
   SIGMA: 2
-
-  #NUM_JOINTS: 17
+  NUM_points: 4
   TARGET_TYPE: 'gaussian'
   EXTRA:
     FINAL_CONV_KERNEL: 1
@@ -66,8 +54,9 @@ MODEL:
 LOSS:
   USE_TARGET_WEIGHT: false
 TRAIN:
-  BATCH_SIZE_PER_GPU: 4
+  BATCH_SIZE_PER_GPU: 10
   SHUFFLE: true
+  BEGIN_EPOCH: 0
   END_EPOCH: 1
   OPTIMIZER: adam
   LR: 0.0001  # Initial learning rate
@@ -85,12 +74,11 @@ TRAIN:
   NESTEROV: false
 TEST:
   BLUR_KERNEL: 11
-  BATCH_SIZE_PER_GPU: 2
-  COCO_BBOX_FILE: 'data/coco/person_detection_results/COCO_val2017_detections_AP_H_56_person.json'
+  BATCH_SIZE_PER_GPU: 8
+  COCO_BBOX_FILE: 'data/coco/annotations/instances_extreme_val2017.json'
   BBOX_THRE: 1.0
   IMAGE_THRE: 0.0
   IN_VIS_THRE: 0.2
-
   MODEL_FILE: output/coco/transpose_r/TP_R_256x192_d256_h1024_enc4_mh8/final_state.pth
   NMS_THRE: 1.0
   OKS_THRE: 0.9
@@ -99,7 +87,7 @@ TEST:
   POST_PROCESS: true
   SHIFT_HEATMAP: true
 DEBUG:
-  DEBUG: false
+  DEBUG: true
   SAVE_BATCH_IMAGES_GT: true
   SAVE_BATCH_IMAGES_PRED: true
   SAVE_HEATMAPS_GT: true

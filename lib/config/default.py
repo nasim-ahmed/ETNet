@@ -19,7 +19,7 @@ _C = CN()
 _C.OUTPUT_DIR = ''
 _C.LOG_DIR = ''
 _C.DATA_DIR = ''
-_C.GPUS = [0,]
+_C.GPUS = (0,)
 _C.WORKERS = 4
 _C.PRINT_FREQ = 20
 _C.AUTO_RESUME = False
@@ -37,8 +37,8 @@ _C.MODEL = CN()
 _C.MODEL.NAME = 'pose_hrnet'
 _C.MODEL.INIT_WEIGHTS = True
 _C.MODEL.PRETRAINED = ''
-_C.MODEL.NUM_POINTS = 4
-#_C.MODEL.TAG_PER_JOINT = True
+_C.MODEL.NUM_points = 17
+_C.MODEL.TAG_PER_point = True
 _C.MODEL.TARGET_TYPE = 'gaussian'
 _C.MODEL.IMAGE_SIZE = [256, 256]  # width * height, ex: 192 * 256
 _C.MODEL.HEATMAP_SIZE = [64, 64]  # width * height, ex: 24 * 32
@@ -60,7 +60,7 @@ _C.LOSS = CN()
 _C.LOSS.USE_OHKM = False
 _C.LOSS.TOPK = 8
 _C.LOSS.USE_TARGET_WEIGHT = True
-_C.LOSS.USE_DIFFERENT_POINTS_WEIGHT = False
+_C.LOSS.USE_DIFFERENT_points_WEIGHT = False
 
 # DATASET related params
 _C.DATASET = CN()
@@ -69,24 +69,15 @@ _C.DATASET.DATASET = 'mpii'
 _C.DATASET.TRAIN_SET = 'train'
 _C.DATASET.TEST_SET = 'valid'
 _C.DATASET.DATA_FORMAT = 'jpg'
-#_C.DATASET.HYBRID_JOINTS_TYPE = ''
+_C.DATASET.HYBRID_points_TYPE = ''
 _C.DATASET.SELECT_DATA = False
-_C.DATASET.RAND_CROP = True
-_C.DATASET.RAND_COLOR = True
-_C.DATASET.BORDER = 128
-_C.DATASET.LIGHTING = True
-_C.DATASET.RAND_SCALE_MIN = 0.6
-_C.DATASET.RAND_SCALE_MAX = 1.4
-_C.DATASET.RAND_SCALE_STEP = 0.1
-_C.DATASET.RAND_SCALE_STEP = 0.1
-_C.DATASET.RAND_SCALES = [1]
 
 # training data augmentation
 _C.DATASET.FLIP = True
 _C.DATASET.SCALE_FACTOR = 0.25
 _C.DATASET.ROT_FACTOR = 30
 _C.DATASET.PROB_HALF_BODY = 0.0
-_C.DATASET.NUM_JOINTS_HALF_BODY = 8
+_C.DATASET.NUM_points_HALF_BODY = 8
 _C.DATASET.COLOR_RGB = False
 
 # train
@@ -173,6 +164,7 @@ def update_config(cfg, args):
         cfg.TEST.MODEL_FILE = os.path.join(
             cfg.DATA_DIR, cfg.TEST.MODEL_FILE
         )
+
     cfg.freeze()
 
 

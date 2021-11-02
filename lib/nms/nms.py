@@ -74,8 +74,7 @@ def nms(dets, thresh):
 
 def oks_iou(g, d, a_g, a_d, sigmas=None, in_vis_thre=None):
     if not isinstance(sigmas, np.ndarray):
-        # sigmas = np.array([.26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89]) / 10.0
-         sigmas = np.array([.5, .5, .5, .5]) / 10.0
+        sigmas = np.array([.5, .5, .5, .5]) / 10.0
     vars = (sigmas * 2) ** 2
     xg = g[0::3]
     yg = g[1::3]
@@ -88,9 +87,7 @@ def oks_iou(g, d, a_g, a_d, sigmas=None, in_vis_thre=None):
         dx = xd - xg
         dy = yd - yg
         e = (dx ** 2 + dy ** 2) / vars / ((a_g + a_d[n_d]) / 2 + np.spacing(1)) / 2
-        if in_vis_thre is not None:
-            ind = list(vg > in_vis_thre) and list(vd > in_vis_thre)
-            e = e[ind]
+
         ious[n_d] = np.sum(np.exp(-e)) / e.shape[0] if e.shape[0] != 0 else 0.0
     return ious
 

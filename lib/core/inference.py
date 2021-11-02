@@ -20,7 +20,7 @@ from utils.transforms import transform_preds
 def get_max_preds(batch_heatmaps):
     '''
     get predictions from score maps
-    heatmaps: numpy.ndarray([batch_size, num_points, height, width]) #(4, 4, 64,48)
+    heatmaps: numpy.ndarray([batch_size, num_points, height, width])
     '''
     assert isinstance(batch_heatmaps, np.ndarray), \
         'batch_heatmaps should be numpy.ndarray'
@@ -45,7 +45,6 @@ def get_max_preds(batch_heatmaps):
     pred_mask = pred_mask.astype(np.float32)
 
     preds *= pred_mask
-
     return preds, maxvals
 
 
@@ -89,7 +88,7 @@ def gaussian_blur(hm, kernel):
 
 
 def get_final_preds(config, hm, center, scale, transform_back=True):
-    coords, maxvals = get_max_preds(hm) #coords(19,4,2) maxvals-(19,4,1)
+    coords, maxvals = get_max_preds(hm)
     heatmap_height = hm.shape[2]
     heatmap_width = hm.shape[3]
 

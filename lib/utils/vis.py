@@ -19,12 +19,12 @@ import cv2
 from core.inference import get_max_preds
 
 
-def save_batch_image_with_joints(batch_image, batch_joints, batch_joints_vis,
+def save_batch_image_with_points(batch_image, batch_points,
                                  file_name, nrow=8, padding=2):
     '''
     batch_image: [batch_size, channel, height, width]
-    batch_joints: [batch_size, num_joints, 3],
-    batch_joints_vis: [batch_size, num_joints, 1],
+    batch_points: [batch_size, num_points, 3],
+    batch_points_vis: [batch_size, num_points, 1],
     }
     '''
     grid = torchvision.utils.make_grid(batch_image, nrow, padding, True)
@@ -41,15 +41,14 @@ def save_batch_image_with_joints(batch_image, batch_joints, batch_joints_vis,
         for x in range(xmaps):
             if k >= nmaps:
                 break
-            joints = batch_joints[k]
-            joints_vis = batch_joints_vis[k]
+            points = batch_points[k]
 
-            for joint, joint_vis in zip(joints, joints_vis):
-                joint[0] = x * width + padding + joint[0]
-                joint[1] = y * height + padding + joint[1]
-                if joint_vis[0]:
-                    cv2.circle(ndarr, (int(joint[0]), int(
-                        joint[1])), 2, [255, 0, 0], 2)
+            for point in points:
+
+                point[0] = x * width + padding + point[0]
+                point[1] = y * height + padding + point[1]
+                cv2.circle(ndarr, (int(point[0]), int(
+                        point[1])), 2, [255, 0, 0], 2)
             k = k + 1
     cv2.imwrite(file_name, ndarr)
 
@@ -58,7 +57,7 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name,
                         normalize=True):
     '''
     batch_image: [batch_size, channel, height, width]
-    batch_heatmaps: ['batch_size, num_joints, height, width]
+    batch_heatmaps: ['batch_size, num_points, height, width]
     file_name: saved file name
     '''
     if normalize:
@@ -69,12 +68,12 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name,
         batch_image.add_(-min).div_(max - min + 1e-5)
 
     batch_size = batch_heatmaps.size(0)
-    num_joints = batch_heatmaps.size(1)
+    num_points = batch_heatmaps.size(1)
     heatmap_height = batch_heatmaps.size(2)
     heatmap_width = batch_heatmaps.size(3)
 
     grid_image = np.zeros((batch_size*heatmap_height,
-                           (num_joints+1)*heatmap_width,
+                           (num_points+1)*heatmap_width,
                            3),
                           dtype=np.uint8)
 
@@ -96,7 +95,7 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name,
 
         height_begin = heatmap_height * i
         height_end = heatmap_height * (i + 1)
-        for j in range(num_joints):
+        for j in range(num_points):
             cv2.circle(resized_image,
                        (int(preds[i][j][0]), int(preds[i][j][1])),
                        1, [0, 0, 255], 1)
@@ -119,28 +118,28 @@ def save_batch_heatmaps(batch_image, batch_heatmaps, file_name,
     cv2.imwrite(file_name, grid_image)
 
 
-def save_debug_images(config, input, meta, target_heat, target_cat, points_pred, output_heat, output_cat,
+def save_debug_images(config, input, meta, target, points_pred, output,
                       prefix):
     if not config.DEBUG.DEBUG:
         return
 
     if config.DEBUG.SAVE_BATCH_IMAGES_GT:
-        save_batch_image_with_joints(
+        save_batch_image_with_points(
             input, meta['points'],
             '{}_gt.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_BATCH_IMAGES_PRED:
-        save_batch_image_with_joints(
+        save_batch_image_with_points(
             input, points_pred,
             '{}_pred.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_HEATMAPS_GT:
         save_batch_heatmaps(
-             input, target_heat, target_cat, '{}_hm_gt.jpg'.format(prefix)
+            input, target, '{}_hm_gt.jpg'.format(prefix)
         )
     if config.DEBUG.SAVE_HEATMAPS_PRED:
         save_batch_heatmaps(
-             input, output_heat, output_cat, '{}_hm_pred.jpg'.format(prefix)
+            input, output, '{}_hm_pred.jpg'.format(prefix)
         )
 
 

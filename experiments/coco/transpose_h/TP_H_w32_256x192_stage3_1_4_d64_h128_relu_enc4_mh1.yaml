@@ -4,7 +4,7 @@ CUDNN:
   DETERMINISTIC: false
   ENABLED: true
 DATA_DIR: ''
-GPUS: (0,1,2,3)
+GPUS: (0,1)
 OUTPUT_DIR: 'output'
 LOG_DIR: 'log'
 WORKERS: 24
@@ -18,15 +18,15 @@ DATASET:
   NUM_points_HALF_BODY: 8
   PROB_HALF_BODY: 0.3
   ROOT: 'data/coco/'
-  ROT_FACTOR: 45 
+  ROT_FACTOR: 45
   SCALE_FACTOR: 0.35
   TEST_SET: 'val2017'
   TRAIN_SET: 'train2017'
 MODEL:
   # Transformer Encoder
-  DIM_MODEL: 192
-  DIM_FEEDFORWARD: 384
-  N_HEAD: 2
+  DIM_MODEL: 64
+  DIM_FEEDFORWARD: 128
+  N_HEAD: 1
   ENCODER_LAYERS: 4
   ATTENTION_ACTIVATION: relu
   POS_EMBEDDING: sine
@@ -34,7 +34,7 @@ MODEL:
   INIT_WEIGHTS: true
   NAME: transpose_h
   NUM_points: 17
-  PRETRAINED: 'models/pytorch/imagenet/hrnet_w48-8ef0771d.pth'
+  PRETRAINED: 'models/pytorch/imagenet/hrnet_w32-36af842e.pth'
   TARGET_TYPE: gaussian
   IMAGE_SIZE:
   - 192
@@ -63,8 +63,8 @@ MODEL:
       - 4
       - 4
       NUM_CHANNELS:
-      - 48
-      - 96
+      - 32
+      - 64
       FUSE_METHOD: SUM
     STAGE3:
       NUM_MODULES: 4
@@ -75,14 +75,14 @@ MODEL:
       - 4
       - 4
       NUM_CHANNELS:
-      - 48
-      - 96
-      - 192
+      - 32
+      - 64
+      - 128
       FUSE_METHOD: SUM
 LOSS:
   USE_TARGET_WEIGHT: true
 TRAIN:
-  BATCH_SIZE_PER_GPU: 15
+  BATCH_SIZE_PER_GPU: 16
   SHUFFLE: true
   BEGIN_EPOCH: 0
   END_EPOCH: 240
@@ -102,12 +102,12 @@ TRAIN:
   NESTEROV: false
 TEST:
   BLUR_KERNEL: 11
-  BATCH_SIZE_PER_GPU: 14
+  BATCH_SIZE_PER_GPU: 4
   COCO_BBOX_FILE: 'data/coco/person_detection_results/COCO_val2017_detections_AP_H_56_person.json'
   BBOX_THRE: 1.0
   IMAGE_THRE: 0.0
   IN_VIS_THRE: 0.2
-  MODEL_FILE: output/coco/pose_hrnet_stage3_1_4_atten/hrnet_w48_stage3_pretrain_1_4_d192_n2_h384_relu_enc4_256x192/model_best.pth
+  MODEL_FILE: models/pytorch/transpose_coco/tp_h_32_256x192_enc4_d64_h128_mh1.pth
   NMS_THRE: 1.0
   OKS_THRE: 0.9
   USE_GT_BBOX: true

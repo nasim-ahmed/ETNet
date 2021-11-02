@@ -15,10 +15,10 @@ import cv2
 
 def flip_back(output_flipped, matched_parts):
     '''
-    ouput_flipped: numpy.ndarray(batch_size, num_joints, height, width)
+    ouput_flipped: numpy.ndarray(batch_size, num_points, height, width)
     '''
     assert output_flipped.ndim == 4,\
-        'output_flipped should be [batch_size, num_joints, height, width]'
+        'output_flipped should be [batch_size, num_points, height, width]'
 
     output_flipped = output_flipped[:, :, :, ::-1]
 
@@ -30,20 +30,20 @@ def flip_back(output_flipped, matched_parts):
     return output_flipped
 
 
-def fliplrtb_points(points, width, height, matched_parts):
+def fliplr_points(points, width, matched_parts):
     """
     flip coords
     """
     # Flip horizontal
     points[:, 0] = width - points[:, 0] - 1
 
+    # Change left-right parts
     for pair in matched_parts:
-        # Change left-right parts
-
         points[pair[0], :], points[pair[1], :] = \
             points[pair[1], :], points[pair[0], :].copy()
 
     return points
+
 
 def transform_preds(coords, center, scale, output_size):
     target_coords = np.zeros(coords.shape)
@@ -105,6 +105,7 @@ def get_dir(src_point, rot_rad):
     src_result = [0, 0]
     src_result[0] = src_point[0] * cs - src_point[1] * sn
     src_result[1] = src_point[0] * sn + src_point[1] * cs
+
     return src_result
 
 
