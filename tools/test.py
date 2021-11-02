@@ -24,7 +24,7 @@ import torchvision.transforms as transforms
 import _init_paths
 from config import cfg
 from config import update_config
-from core.loss import KeypointMSELoss, CategoryLoss
+from core.loss import pointsMSELoss
 from core.function import validate
 from utils.utils import create_logger
 
@@ -99,13 +99,25 @@ def main():
         model.load_state_dict(torch.load(model_state_file))
     w, h = cfg.MODEL.IMAGE_SIZE
 
-    model = torch.nn.DataParallel(model, device_ids=(0,)).cuda()
+    ######### FOR UNSeen Resolutions  #########
+    # input_feature_length = int(w * h / 8 * 8)  # for TransPose-R
+    # if hasattr(model, 'pos_embedding') and \
+    #     model.pos_embedding is not None and input_feature_length != len(model.pos_embedding):
+    #     import torch.nn.functional as F
+    #     pos_embedding_org = model.pos_embedding
+    #     pos_embedding_org = \
+    #         pos_embedding_org.view(model.pe_h, model.pe_w, 1, -1).permute(2,3,0,1)  # [h,w,1,d]
+    #     pos_embedding_new = F.interpolate(pos_embedding_org, size=(h//8,w//8), mode='bilinear', align_corners=True) #[1,d,h,w]
+    #     model.pos_embedding = torch.nn.Parameter(pos_embedding_new.flatten(2).permute(2, 0, 1))
+    #     print(model.pos_embedding.shape)
+    ######### FOR UNSeen Resolutions  #########
+
+    model = torch.nn.DataParallel(model, device_ids=cfg.GPUS).cuda()
 
     # define loss function (criterion) and optimizer
-    criterion = KeypointMSELoss(
+    criterion = pointsMSELoss(
         use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
     ).cuda()
-    criterion2 = CategoryLoss().cuda()
 
     # Data loading code
     normalize = transforms.Normalize(
@@ -126,9 +138,8 @@ def main():
         pin_memory=True
     )
 
-
     # evaluate on validation set
-    validate(cfg, valid_loader, valid_dataset, model, criterion, criterion2,
+    validate(cfg, valid_loader, valid_dataset, model, criterion,
              final_output_dir, tb_log_dir)
 
 

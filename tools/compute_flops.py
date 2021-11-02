@@ -47,9 +47,9 @@ f = open(file_name, 'r')
 
 cfg = CfgNode(yaml.load(f))
 cfg.DATASET.DATA_FORMAT = 'jpg'
-cfg.DATASET.NUM_JOINTS_HALF_BODY = 8
+cfg.DATASET.NUM_points_HALF_BODY = 8
 cfg.DATASET.PROB_HALF_BODY = 0.0
-cfg.LOSS.USE_DIFFERENT_JOINTS_WEIGHT = False
+cfg.LOSS.USE_DIFFERENT_points_WEIGHT = False
 cfg.TEST.SOFT_NMS = False
 cfg.MODEL.INIT_WEIGHTS = True
 
