@@ -285,13 +285,14 @@ class TransPoseR(nn.Module):
             extra.NUM_DECONV_KERNELS,  # [4]
         )
 
-        self.final_layer = nn.Conv2d(
+        self.heat_layer = nn.Conv2d(
             in_channels=d_model,
             out_channels=cfg.MODEL.NUM_points,
             kernel_size=extra.FINAL_CONV_KERNEL,
             stride=1,
-            padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
-        )
+            padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0)
+
+        self.cat_layer = nn.Linear(in_features=256*64*48, out_features=80)
 
     def _make_position_embedding(self, w, h, d_model, pe_type='sine'):
         assert pe_type in ['none', 'learnable', 'sine']
@@ -414,14 +415,18 @@ class TransPoseR(nn.Module):
         x = self.global_encoder(x, pos=self.pos_embedding)
         x = x.permute(1, 2, 0).contiguous().view(bs, c, h, w)
         x = self.deconv_layers(x)
-        x = self.final_layer(x)
+        heat = self.heat_layer(x)
+        # x = self.cat_head(x)
+        # x = self.act2(x)
+        x = torch.flatten(x, 1)
+        cat = self.cat_layer(x)
 
-        return x
+        return heat, cat
 
     def init_weights(self, pretrained=''):
         if os.path.isfile(pretrained):
             logger.info('=> init final conv weights from normal distribution')
-            for name, m in self.final_layer.named_modules():
+            for name, m in self.heat_layer.named_modules():
                 if isinstance(m, nn.Conv2d):
                     logger.info(
                         '=> init {}.weight as normal(0, 0.001)'.format(name))

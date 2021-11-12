@@ -25,7 +25,18 @@ from utils.vis import save_debug_images
 logger = logging.getLogger(__name__)
 
 
-def train(config, train_loader, model, criterion, optimizer, epoch,
+def _topk_class(scores, K=1):
+    # same as our cat_out dimension
+    batch, cat = scores.size()
+
+    topk_scores, topk_inds = torch.topk(scores.reshape(batch, -1), K)
+
+    topk_clses = topk_inds .int()
+
+    return topk_clses, topk_scores
+
+
+def train(config, train_loader, model, criterion, criterion2, optimizer, epoch,
           output_dir, tb_log_dir, writer_dict):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -36,22 +47,28 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
     model.train()
 
     end = time.time()
-    for i, (input, target, meta) in enumerate(train_loader):
+    for i, (input, target, target_cat, meta) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
         # compute output
-        outputs = model(input)
+        heat_out, cat_out = model(input)
 
         target = target.cuda(non_blocking=True)
+        target_cat = target_cat.cuda(non_blocking=True)
 
-        if isinstance(outputs, list):
-            loss = criterion(outputs[0], target)
-            for output in outputs[1:]:
-                loss += criterion(output, target)
+        if isinstance(heat_out, list):
+            loss_h = criterion(heat_out[0], target)
+            for output in heat_out[1:]:
+                loss_h += criterion(output, target)
         else:
-            output = outputs
-            loss = criterion(output, target)
+            output = heat_out
+            loss_h = criterion(output, target)
+            target_cat = torch.squeeze(target_cat)
+
+            target_new = torch.max(target_cat, 1)[1]
+            loss_c = criterion2(cat_out, target_new)
+            loss = loss_h + loss_c
 
         # loss = criterion(output, target, target_weight)
 
@@ -94,7 +111,7 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
                               prefix)
 
 
-def validate(config, val_loader, val_dataset, model, criterion, output_dir,
+def validate(config, val_loader, val_dataset, model, criterion, criterion2, output_dir,
              tb_log_dir, writer_dict=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
@@ -108,27 +125,27 @@ def validate(config, val_loader, val_dataset, model, criterion, output_dir,
         (num_samples, config.MODEL.NUM_points, 3),
         dtype=np.float32
     )
-    all_boxes = np.zeros((num_samples, 6))
+    all_boxes = np.zeros((num_samples, 7))
     image_path = []
     filenames = []
     imgnums = []
     idx = 0
     with torch.no_grad():
         end = time.time()
-        for i, (input, target, meta) in enumerate(val_loader):
+        for i, (input, target, target_cat, meta) in enumerate(val_loader):
             # compute output
-            outputs = model(input)
-            if isinstance(outputs, list):
-                output = outputs[-1]
+            heat_out, cat_out = model(input)
+            if isinstance(heat_out, list):
+                output = heat_out[-1]
             else:
-                output = outputs
+                output = heat_out
 
             if config.TEST.FLIP_TEST:
                 # this part is ugly, because pytorch has not supported negative index
                 # input_flipped = model(input[:, :, :, ::-1])
                 input_flipped = np.flip(input.cpu().numpy(), 3).copy()
                 input_flipped = torch.from_numpy(input_flipped).cuda()
-                outputs_flipped = model(input_flipped)
+                outputs_flipped, cat_flipped = model(input_flipped)
 
                 if isinstance(outputs_flipped, list):
                     output_flipped = outputs_flipped[-1]
@@ -140,10 +157,20 @@ def validate(config, val_loader, val_dataset, model, criterion, output_dir,
                 output_flipped = torch.from_numpy(output_flipped.copy()).cuda()
 
                 output = (output + output_flipped) * 0.5
+                cat_out = (cat_out + cat_flipped) * 0.5
 
             target = target.cuda(non_blocking=True)
+            target_cat = target_cat.cuda(non_blocking=True)
+            target_cat = torch.squeeze(target_cat)
+            target_new = torch.max(target_cat, 1)[1]
 
-            loss = criterion(output, target)
+            loss_h = criterion(output, target)
+            loss_c = criterion2(cat_out, target_new)
+            loss = loss_h + loss_c
+
+            cls = torch.max(cat_out, 1)[1]
+            cls = cls + 1
+            # output_cat = cls.type(torch.cuda.FloatTensor)
 
             num_images = input.size(0)
             # measure accuracy and record loss
@@ -160,6 +187,7 @@ def validate(config, val_loader, val_dataset, model, criterion, output_dir,
             c = meta['center'].numpy()
             s = meta['scale'].numpy()
             score = meta['score'].numpy()
+            cat = cls.detach().cpu().numpy().flatten()
 
             preds, maxvals = get_final_preds(
                 config, output.clone().cpu().numpy(), c, s)
@@ -171,6 +199,7 @@ def validate(config, val_loader, val_dataset, model, criterion, output_dir,
             all_boxes[idx:idx + num_images, 2:4] = s[:, 0:2]
             all_boxes[idx:idx + num_images, 4] = np.prod(s*200, 1)
             all_boxes[idx:idx + num_images, 5] = score
+            all_boxes[idx:idx + num_images, 6] = cat
             image_path.extend(meta['image'])
 
             idx += num_images

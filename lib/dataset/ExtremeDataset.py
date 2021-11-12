@@ -36,6 +36,7 @@ class ExtremeDataset(Dataset):
         self.is_train = is_train
         self.root = root
         self.image_set = image_set
+        self.categories = 80
 
         self.output_path = cfg.OUTPUT_DIR
         self.data_format = cfg.DATASET.DATA_FORMAT
@@ -119,6 +120,7 @@ class ExtremeDataset(Dataset):
 
         c = db_rec['center']
         s = db_rec['scale']
+        obj_cat = db_rec['category'].astype(int)
         score = db_rec['score'] if 'score' in db_rec else 1
         r = 0
 
@@ -158,8 +160,9 @@ class ExtremeDataset(Dataset):
             points[i, 0:2] = affine_transform(points[i, 0:2], trans)
             points_heatmap[i, 0:2] = affine_transform(points_heatmap[i, 0:2], trans_heatmap)
 
-        target = self.generate_target(points_heatmap)
+        target, target_cat = self.generate_target(points_heatmap, obj_cat)
 
+        target_cat = torch.from_numpy(target_cat).long()
         target = torch.from_numpy(target)
 
         meta = {
@@ -167,14 +170,14 @@ class ExtremeDataset(Dataset):
             'filename': filename,
             'imgnum': imgnum,
             'points': points,
-
+            'category': obj_cat,
             'center': c,
             'scale': s,
             'rotation': r,
             'score': score
         }
 
-        return input, target, meta
+        return input, target, target_cat, meta
 
     def select_data(self, db):
         db_selected = []
@@ -206,7 +209,7 @@ class ExtremeDataset(Dataset):
         return db_selected
 
 
-    def generate_target(self, points):
+    def generate_target(self, points, category):
         '''
         :param points:  [num_points, 3]
         :param points_vis: [num_points, 3]
@@ -221,6 +224,8 @@ class ExtremeDataset(Dataset):
                                self.heatmap_size[1],
                                self.heatmap_size[0]),
                               dtype=np.float32)
+            #one-hot
+            target_cat = np.eye(self.categories)[category]
 
             for point_id in range(self.num_points):
 
@@ -233,6 +238,6 @@ class ExtremeDataset(Dataset):
 
                 target[point_id] = np.exp(- ((x - mu_x) ** 2 + (y - mu_y) ** 2) / (2 * self.sigma ** 2))
 
-        return target
+        return target, target_cat
 
 

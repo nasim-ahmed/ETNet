@@ -29,7 +29,7 @@ from tensorboardX import SummaryWriter
 import _init_paths
 from config import cfg
 from config import update_config
-from core.loss import pointsMSELoss
+from core.loss import pointsMSELoss, FocalLoss
 from core.function import train
 from core.function import validate
 from utils.utils import get_optimizer
@@ -105,7 +105,7 @@ def main():
     shutil.copy2(
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
-    # logger.info(pprint.pformat(model))
+    #logger.info(pprint.pformat(model))
 
     writer_dict = {
         'writer': SummaryWriter(log_dir=tb_log_dir),
@@ -124,6 +124,8 @@ def main():
     criterion = pointsMSELoss(
         use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
     ).cuda()
+
+    criterion2 = FocalLoss().cuda()
 
     # Data loading code
     normalize = transforms.Normalize(
@@ -201,12 +203,12 @@ def main():
 
         logger.info("=> current learning rate is {:.6f}".format(lr_scheduler.get_last_lr()[0]))
         # train for one epoch
-        train(cfg, train_loader, model, criterion, optimizer, epoch,
+        train(cfg, train_loader, model, criterion, criterion2, optimizer, epoch,
               final_output_dir, tb_log_dir, writer_dict)
 
         # evaluate on validation set
         perf_indicator = validate(
-            cfg, valid_loader, valid_dataset, model, criterion,
+            cfg, valid_loader, valid_dataset, model, criterion, criterion2,
             final_output_dir, tb_log_dir, writer_dict
         )
         
